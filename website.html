@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Channel Guesser</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,100;0,300;0,400;0,500;0,700;0,900;1,100;1,300;1,400;1,500;1,700;1,900&display=swap" rel="stylesheet"> 
+
+    <style>
+        body {
+            background-color: rgb(24, 24, 24);
+        }
+        .Comments {
+            padding-top: 700px;
+            padding-left: 40%;
+        }
+        .profile {
+            display: flex;
+            align-items: top;
+            color: white;
+        }
+        .pfp {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+        }
+        .name {
+            padding-left: 10px;
+            size: 12px;
+            font-family: "Roboto",sans-serif;
+            font-weight: 400;
+        }
+        
+        .text {
+            padding-left: 10px;
+            font-family: "Roboto",sans-serif;
+            width: 40ch;
+            font-weight: 400;
+        }
+    </style>
+</head>
+<body>
+    <div class="Comments"></div>
+</body>
+    <script>
+        const key = 'AIzaSyCcLnGdiWhmcC1W1IjyDH_sFxaQ4zazJ_U'
+        const urlParams = new URLSearchParams(window.location.search)
+        const videoId = urlParams.get("videoId")
+
+        function getComments() { 
+             fetch (`https://www.googleapis.com/youtube/v3/commentThreads?part=snippet&videoId=${videoId}&textFormat=plainText&order=relevance&key=${key}`)
+            .then(respone=>{
+                console.log("Response")
+                return respone.json()
+            }).then(data=>{
+                let i = 0
+                for (let commentData of data.items) {
+                    const comment = document.createElement("p")
+                    const snippet = commentData.snippet.topLevelComment.snippet
+                    let commentText = snippet.textDisplay
+
+                    let s = ""
+                    let timeScale = "second"
+                    let timeSincePosted
+                    const secondsSincePosted = (Date.now() - new Date(snippet.publishedAt)) / 1000
+                    console.log(2419200 - secondsSincePosted)
+                    if (secondsSincePosted > 59) {
+                        if (secondsSincePosted < 3600) {
+                            timeScale = "minute"
+                            timeSincePosted = Math.floor(secondsSincePosted / 60)
+                        }else if (secondsSincePosted < 86400) {
+                            timeScale = "hour"
+                            timeSincePosted = Math.floor(secondsSincePosted / 3600)
+                        }else if (secondsSincePosted < 604800) {
+                            timeScale = "day"
+                            timeSincePosted = Math.floor(secondsSincePosted / 86400)
+                        }else if (secondsSincePosted < 2419200) {
+                            timeScale = "week"
+                            timeSincePosted = Math.floor(secondsSincePosted / 604800)
+                        }else if (secondsSincePosted < 29030400) {
+                            timeScale = "month"
+                            timeSincePosted = Math.floor(secondsSincePosted / 2419200)
+                        } 
+                        else {
+                            timeScale = "year"
+                            timeSincePosted = Math.floor(secondsSincePosted / 29030400)
+                        }
+                    }
+                    if (timeSincePosted  > 1) s = "s"
+
+                    if (snippet.authorChannelId.value == snippet.channelId) continue
+                    getDetailsById(snippet.authorChannelId.value).then(details=>{
+                        comment.innerHTML = `
+                        <div class="profile">
+                            <img src = ${details.picture} class="pfp"/>
+                            <div>  
+                                <div class="name">@${details.name} <font color = "grey">${timeSincePosted} ${timeScale}${s} ago </font> </div>
+                                <div class="text">${commentText}</div>
+                            </div>
+                         </div>`
+                        document.body.getElementsByClassName("Comments")[0].appendChild(comment)
+                    })
+
+                    i ++
+                    if (i >= 10) break;
+                };
+            })
+        }
+
+        async function getDetailsById(id) {
+            let resultingName
+            let resultingPFP
+            await fetch (`https://www.googleapis.com/youtube/v3/channels?part=snippet&id=${id}&key=${key}`).then(response=>{
+                return response.json()
+            }).then(data=>{
+                const details = data.items[0].snippet
+                resultingName = details.title
+                resultingPFP = details.thumbnails.default.url
+            })
+            return {name:resultingName,picture:resultingPFP}
+        }    
+
+        getComments()
+    </script>
+</html>
